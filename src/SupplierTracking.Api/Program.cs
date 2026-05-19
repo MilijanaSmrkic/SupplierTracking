@@ -81,6 +81,10 @@ try
     builder.Services.AddValidatorsFromAssembly(applicationAssembly);
     builder.Services.AddInfrastructure(builder.Configuration);
 
+    // Health checks — GET /health
+    builder.Services.AddHealthChecks()
+        .AddDbContextCheck<SupplierTracking.Infrastructure.Persistence.ApplicationDbContext>("database");
+
     // Rate limiting — 10 login attempts per IP per minute
     builder.Services.AddRateLimiter(options =>
     {
@@ -128,6 +132,7 @@ try
     app.UseAuthorization();
     app.MapControllers();
     app.MapHub<OrderHub>("/hubs/orders");
+    app.MapHealthChecks("/health");
 
     HangfireJobRegistrar.RegisterRecurringJobs();
 
