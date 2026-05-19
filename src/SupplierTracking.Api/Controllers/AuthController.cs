@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using SupplierTracking.Application.Auth;
 using SupplierTracking.Application.Models;
+// ReSharper disable once RedundantUsingDirective
 
 namespace SupplierTracking.Api.Controllers;
 
@@ -43,6 +44,27 @@ public sealed class AuthController : ControllerBase
     [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<IActionResult> Login(
         [FromBody] LoginCommand command,
+        CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(command, cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Exchange a valid refresh token for a new access token + rotated refresh token.
+    /// </summary>
+    /// <remarks>
+    /// Refresh tokens are valid for 7 days. Each call rotates the refresh token —
+    /// the old one is immediately invalidated. Store the new refresh token from the response.
+    /// </remarks>
+    /// <response code="200">New access token and rotated refresh token.</response>
+    /// <response code="401">Refresh token is invalid or expired.</response>
+    [HttpPost("refresh")]
+    [EnableRateLimiting("login")]
+    [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> Refresh(
+        [FromBody] RefreshTokenCommand command,
         CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(command, cancellationToken);

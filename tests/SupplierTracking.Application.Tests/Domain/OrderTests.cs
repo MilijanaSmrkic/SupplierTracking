@@ -32,6 +32,26 @@ public class OrderTests
         Assert.Equal(30.00m, order.TotalAmount);
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(-100)]
+    public void AddItem_ShouldThrow_WhenQuantityIsNotPositive(int quantity)
+    {
+        var order = Order.Create(SupplierId, UserId);
+        Assert.Throws<ArgumentException>(() => order.AddItem(Guid.NewGuid(), quantity, 10m));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-0.01)]
+    [InlineData(-50)]
+    public void AddItem_ShouldThrow_WhenUnitPriceIsNotPositive(decimal price)
+    {
+        var order = Order.Create(SupplierId, UserId);
+        Assert.Throws<ArgumentException>(() => order.AddItem(Guid.NewGuid(), 1, price));
+    }
+
     [Fact]
     public void AddItem_ShouldThrow_WhenOrderIsNotDraft()
     {

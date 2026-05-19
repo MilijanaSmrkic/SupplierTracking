@@ -16,6 +16,13 @@ public class Order
     public DateTime  CreatedAt            { get; private set; }
     public DateTime  UpdatedAt            { get; private set; }
 
+    /// <summary>
+    /// Optimistic concurrency token — EF Core uses this to detect conflicting updates.
+    /// If two requests load the same order and both try to save, the second one gets
+    /// DbUpdateConcurrencyException instead of silently overwriting the first.
+    /// </summary>
+    public byte[] RowVersion { get; private set; } = [];
+
     public decimal TotalAmount => _items.Sum(i => i.TotalPrice);
 
     public Supplier?                         Supplier   { get; private set; }
@@ -55,6 +62,12 @@ public class Order
     {
         if (Status != OrderStatuses.Draft)
             throw new InvalidOperationException("Items can only be added to orders in Draft status.");
+
+        if (quantity <= 0)
+            throw new ArgumentException("Quantity must be greater than zero.", nameof(quantity));
+
+        if (unitPrice <= 0)
+            throw new ArgumentException("Unit price must be greater than zero.", nameof(unitPrice));
 
         _items.Add(OrderItem.Create(Id, productId, quantity, unitPrice));
         UpdatedAt = DateTime.UtcNow;

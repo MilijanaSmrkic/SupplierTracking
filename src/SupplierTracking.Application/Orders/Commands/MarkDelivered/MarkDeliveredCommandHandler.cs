@@ -41,10 +41,19 @@ internal sealed class MarkDeliveredCommandHandler : IRequestHandler<MarkDelivere
             "Order {OrderNumber} delivered — supplier '{SupplierName}', total {Total:C}",
             order.OrderNumber, order.Supplier?.Name, order.TotalAmount);
 
-        await _publisher.Publish(new OrderStatusChangedEvent(
-            order.Id, order.OrderNumber, order.SupplierId,
-            order.Supplier?.Name ?? string.Empty,
-            previousStatus, order.Status,
-            _currentUser.UserId, DateTime.UtcNow), cancellationToken);
+        try
+        {
+            await _publisher.Publish(new OrderStatusChangedEvent(
+                order.Id, order.OrderNumber, order.SupplierId,
+                order.Supplier?.Name ?? string.Empty,
+                previousStatus, order.Status,
+                _currentUser.UserId, DateTime.UtcNow), cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to publish OrderStatusChangedEvent for order {OrderId} (status: {Status})",
+                order.Id, order.Status);
+        }
     }
 }

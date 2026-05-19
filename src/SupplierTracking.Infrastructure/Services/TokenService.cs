@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -37,6 +38,23 @@ internal sealed class TokenService : ITokenService
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
+
+    public string GenerateRefreshToken()
+    {
+        var bytes = RandomNumberGenerator.GetBytes(64);
+        return Convert.ToBase64String(bytes);
+    }
+
+    public string HashRefreshToken(string refreshToken)
+    {
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(refreshToken));
+        return Convert.ToHexString(hash).ToLowerInvariant();
+    }
+
+    public bool VerifyRefreshToken(string refreshToken, string hash) =>
+        CryptographicOperations.FixedTimeEquals(
+            Encoding.UTF8.GetBytes(HashRefreshToken(refreshToken)),
+            Encoding.UTF8.GetBytes(hash));
 
     public string HashPassword(string password) =>
         BCrypt.Net.BCrypt.HashPassword(password);

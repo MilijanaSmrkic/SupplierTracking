@@ -10,9 +10,11 @@ namespace SupplierTracking.Application.Auth;
 internal sealed class LoginCommandHandler : IRequestHandler<LoginCommand, LoginResponse>
 {
     private readonly IApplicationDbContext _context;
-    private readonly ITokenService         _tokenService;
-    private readonly JwtSettings           _jwtSettings;
+    private readonly ITokenService _tokenService;
+    private readonly JwtSettings _jwtSettings;
     private readonly ILogger<LoginCommandHandler> _logger;
+
+    private const int RefreshTokenExpiryDays = 1;
 
     public LoginCommandHandler(
         IApplicationDbContext context,
@@ -20,10 +22,10 @@ internal sealed class LoginCommandHandler : IRequestHandler<LoginCommand, LoginR
         IOptions<JwtSettings> jwtSettings,
         ILogger<LoginCommandHandler> logger)
     {
-        _context      = context;
+        _context = context;
         _tokenService = tokenService;
-        _jwtSettings  = jwtSettings.Value;
-        _logger       = logger;
+        _jwtSettings = jwtSettings.Value;
+        _logger = logger;
     }
 
     public async Task<LoginResponse> Handle(LoginCommand request, CancellationToken cancellationToken)
@@ -37,16 +39,26 @@ internal sealed class LoginCommandHandler : IRequestHandler<LoginCommand, LoginR
             throw new UnauthorizedAccessException("Invalid username or password.");
         }
 
-        var token = _tokenService.GenerateToken(user);
+        // Generate tokens
+        var accessToken = _tokenService.GenerateToken(user);
+        var refreshToken = _tokenService.GenerateRefreshToken();
+        var refreshExpiry = DateTime.UtcNow.AddDays(RefreshTokenExpiryDays);
+
+        // Store hashed refresh token — plain text never persisted
+        user.RefreshTokenHash = _tokenService.HashRefreshToken(refreshToken);
+        user.RefreshTokenExpiry = refreshExpiry;
+        await _context.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(
             "User '{UserName}' (Id={UserId}, Role={Role}) logged in successfully",
             user.UserName, user.Id, user.Role);
 
         return new LoginResponse(
-            token,
-            user.UserName,
-            user.Role,
-            DateTime.UtcNow.AddMinutes(_jwtSettings.ExpiryMinutes));
+            Token: accessToken,
+            RefreshToken: refreshToken,
+            UserName: user.UserName,
+            Role: user.Role,
+            ExpiresAt: DateTime.UtcNow.AddMinutes(_jwtSettings.ExpiryMinutes),
+            RefreshTokenExpiresAt: refreshExpiry);
     }
 }

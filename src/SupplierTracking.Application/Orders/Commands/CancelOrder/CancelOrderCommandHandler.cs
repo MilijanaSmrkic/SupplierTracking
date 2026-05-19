@@ -44,10 +44,19 @@ internal sealed class CancelOrderCommandHandler : IRequestHandler<CancelOrderCom
             "Order {OrderNumber} cancelled by user {UserId} — reason: '{Reason}'",
             order.OrderNumber, _currentUser.UserId, request.Reason ?? "N/A");
 
-        await _publisher.Publish(new OrderStatusChangedEvent(
-            order.Id, order.OrderNumber, order.SupplierId,
-            order.Supplier?.Name ?? string.Empty,
-            previousStatus, order.Status,
-            _currentUser.UserId, DateTime.UtcNow), cancellationToken);
+        try
+        {
+            await _publisher.Publish(new OrderStatusChangedEvent(
+                order.Id, order.OrderNumber, order.SupplierId,
+                order.Supplier?.Name ?? string.Empty,
+                previousStatus, order.Status,
+                _currentUser.UserId, DateTime.UtcNow), cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to publish OrderStatusChangedEvent for order {OrderId} (status: {Status})",
+                order.Id, order.Status);
+        }
     }
 }

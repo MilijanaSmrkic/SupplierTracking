@@ -15,6 +15,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext, IUnitOfWor
     public DbSet<OrderItem>      OrderItems      => Set<OrderItem>();
     public DbSet<OrderStatusLog> OrderStatusLogs => Set<OrderStatusLog>();
 
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);

@@ -30,6 +30,27 @@ try
     builder.Host.UseSerilog((ctx, config) =>
         config.ReadFrom.Configuration(ctx.Configuration));
 
+    // CORS — allow configured origins (set AllowedOrigins in appsettings per environment)
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy("Frontend", policy =>
+        {
+            var origins = builder.Configuration
+                .GetSection("AllowedOrigins")
+                .Get<string[]>() ?? [];
+
+            if (origins.Length > 0)
+                policy.WithOrigins(origins)
+                      .AllowAnyHeader()
+                      .AllowAnyMethod()
+                      .AllowCredentials(); // required for SignalR
+            else
+                policy.AllowAnyOrigin()
+                      .AllowAnyHeader()
+                      .AllowAnyMethod();
+        });
+    });
+
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen(options =>
@@ -121,6 +142,7 @@ try
     }
 
     app.UseRateLimiter();
+    app.UseCors("Frontend");
     app.UseMiddleware<ExceptionHandlingMiddleware>();
     app.UseSerilogRequestLogging(options =>
     {

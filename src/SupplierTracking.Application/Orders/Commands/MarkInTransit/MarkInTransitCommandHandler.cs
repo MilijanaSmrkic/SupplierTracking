@@ -41,10 +41,19 @@ internal sealed class MarkInTransitCommandHandler : IRequestHandler<MarkInTransi
             "Order {OrderNumber} marked InTransit — tracking '{TrackingCode}', supplier '{SupplierName}'",
             order.OrderNumber, request.TrackingCode ?? "N/A", order.Supplier?.Name);
 
-        await _publisher.Publish(new OrderStatusChangedEvent(
-            order.Id, order.OrderNumber, order.SupplierId,
-            order.Supplier?.Name ?? string.Empty,
-            previousStatus, order.Status,
-            _currentUser.UserId, DateTime.UtcNow), cancellationToken);
+        try
+        {
+            await _publisher.Publish(new OrderStatusChangedEvent(
+                order.Id, order.OrderNumber, order.SupplierId,
+                order.Supplier?.Name ?? string.Empty,
+                previousStatus, order.Status,
+                _currentUser.UserId, DateTime.UtcNow), cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to publish OrderStatusChangedEvent for order {OrderId} (status: {Status})",
+                order.Id, order.Status);
+        }
     }
 }

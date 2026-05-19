@@ -1,4 +1,5 @@
 using FluentValidation;
+using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -51,6 +52,11 @@ public sealed class ExceptionHandlingMiddleware
                     .ToDictionary(
                         g => g.Key,
                         g => g.Select(e => e.ErrorMessage).ToArray());
+                break;
+
+            case DbUpdateConcurrencyException:
+                statusCode = StatusCodes.Status409Conflict;
+                message    = "The record was modified by another request. Please reload and try again.";
                 break;
 
             case KeyNotFoundException:

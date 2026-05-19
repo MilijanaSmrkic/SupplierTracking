@@ -26,6 +26,11 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
 
         builder.HasIndex(o => o.OrderNumber).IsUnique();
 
+        // Optimistic concurrency — SQL Server rowversion (timestamp) column
+        builder.Property(o => o.RowVersion)
+            .IsRowVersion()
+            .IsConcurrencyToken();
+
         // Composite index — covers the most common paged query: filter by supplier + status, sort by date
         builder.HasIndex(o => new { o.SupplierId, o.Status, o.CreatedAt })
             .IsDescending(false, false, true);

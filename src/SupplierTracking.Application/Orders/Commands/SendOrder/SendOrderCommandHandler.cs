@@ -45,10 +45,19 @@ internal sealed class SendOrderCommandHandler : IRequestHandler<SendOrderCommand
             "Order {OrderNumber} sent to supplier '{SupplierName}' by user {UserId}",
             order.OrderNumber, order.Supplier?.Name, _currentUser.UserId);
 
-        await _publisher.Publish(new OrderStatusChangedEvent(
-            order.Id, order.OrderNumber, order.SupplierId,
-            order.Supplier?.Name ?? string.Empty,
-            previousStatus, order.Status,
-            _currentUser.UserId, DateTime.UtcNow), cancellationToken);
+        try
+        {
+            await _publisher.Publish(new OrderStatusChangedEvent(
+                order.Id, order.OrderNumber, order.SupplierId,
+                order.Supplier?.Name ?? string.Empty,
+                previousStatus, order.Status,
+                _currentUser.UserId, DateTime.UtcNow), cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to publish OrderStatusChangedEvent for order {OrderId} (status: {Status})",
+                order.Id, order.Status);
+        }
     }
 }
